@@ -34,6 +34,9 @@ We track and refactor our ideas and codes on Google doc and in this file
 ### read and modify input dataset
 
 ```{r cars}
+library(tidyverse)
+library(ggplot2)
+library(cowplot)
 library(reshape2) 
 # read dataset
 cases <- read.csv("data/subtype_counts.csv",stringsAsFactors = FALSE)
