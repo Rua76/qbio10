@@ -1,0 +1,145 @@
+---
+title: "def_prog_challenge"
+output: html_document
+date: "2024-09-18"
+Team: "Butterfly"
+---
+
+## Basic ideas
+
+assumptions: 1. the risk of influenza infection is 28% in each year of life 2. the frequency of each circulating subtype could be inferred from the numbers of isolates sampled (primarily in hospitals) each year
+
+let e_ij = probability of an individual with birth year i has his or her first IAV infection in calendar year j: e_ij = (1-a)\^(j-i) \* a where a is the risk of influenza infection in each year of life (0.28)
+
+next, scaled e_ij by the fraction f_S of circulating IAVs belonging to subtype S (H1N1, H2N2, H3N2), so e_Sij = f_S\|j \* e_ij = f_S\|j \* (1-a)\^(j-i) \* a
+
+finally, e_Si\|y is the probability that individuals born in i experienced their first infection with subtype S, given that y is current year (2017?). So we have: e_Si\|y = sum (e_Sij) from year i to year y
+
+## codes
+
+### read and modify input dataset
+
+```{r cars}
+library(reshape2) 
+# read dataset
+cases <- read.csv("data/subtype_counts.csv",stringsAsFactors = FALSE)
+# sort columns by column names
+cases <- cases[,order(colnames(cases))]
+# mutate the dataframe referencing Year, so each row is (Year, Subtype, Count)
+mut_cases <- melt(cases, id = c("Year")) 
+```
+
+### have a look on the dataset
+
+```{r pressure, echo=FALSE}
+# plot proportion of isolates sampled each year in the US
+ggplot(mut_cases, aes(fill = variable, 
+                      y = value, x = Year))+ 
+  geom_bar(position = "fill", stat = "identity")+ 
+  ggtitle("proportion of isolates sampled each year in the US")+ 
+  labs(y="Proportion")+
+  theme(plot.title = element_text(hjust = 0.5))+
+  theme_cowplot()
+```
+
+### get first infection probability between time interval
+
+```{r pressure, echo=FALSE}
+# function to get first infection probability
+get_first_infect_prob <- function(birth_year, year, infect_prob){
+  # assert input is numbers
+  stopifnot(is.numeric(birth_year) & is.numeric(year) & is.numeric(infect_prob))
+  # assert input is positive
+  stopifnot((birth_year)>0 & (year)>0 & (infect_prob)> 0)
+  return((1-infect_prob) ^ (year-birth_year) * infect_prob)
+}
+get_first_infect_prob(1960, 1963, 0.28) # test code
+```
+
+### get subtype probability at a given year
+
+```{r pressure, echo=FALSE}
+get_subtype_prob <- function(year, subtype, df){
+  # get year and subtype
+  subtype_at_year <- df[df$Year == year & df$variable == subtype, ]
+  # get total count of all subtypes at given year
+  total_count <- df %>%
+    group_by(Year) %>%
+    summarise(Freq = sum(value))
+  total_count <- total_count[total_count$Year == year, ]
+  # return subtype proportion at given year
+  return (subtype_at_year$value / total_count$Freq)
+}
+get_subtype_prob(1960, 'H2N2', mut_cases) # test code
+```
+
+### get subtype first infect probability at given year for given birth year
+
+```{r pressure, echo=FALSE}
+get_subtype_year_prob <- function(df, subtype,  birth_year, year, infect_prob){
+  subtype_prob <- get_subtype_prob(year, subtype, df)
+  infect_prob <- get_first_infect_prob(birth_year, year, infect_prob)
+  # return subtype infect probability at given year for given birth year
+  return(subtype_prob*infect_prob)
+}
+get_subtype_year_prob(mut_cases, 'H2N2', 1960, 1963, 0.28) # test code
+```
+
+### get probability of subtype first infection at a given year for given birth year
+
+```{r pressure, echo=FALSE}
+get_final_prob <- function(df, subtype,  birth_year, end_year, infect_prob){
+  final_prob <- 0
+  # from birth year to given end year, compute each year's probability and add them up
+  for (x in birth_year: end_year){
+    year_prob <- get_subtype_year_prob(df, subtype, birth_year, x, infect_prob)
+    final_prob = final_prob+year_prob
+  }
+  return(final_prob)
+}
+get_final_prob(mut_cases, 'H2N2', 1960, 1968, 0.28) # test code
+```
+
+## wrap up
+
+### get each year probability
+
+For every birth year between 1960 and 1996, since the final year in the dataset is 2017, I will compute all the birth year to 2017 probability
+
+```{r pressure, echo=FALSE}
+# final function for computing probability of first infection for each subtypes
+
+get_birthyear_prob <- function(df, end_year, infect_prob, birth_year_range, subtype_list ){
+  final_df = NULL
+  for (by in birth_year_range){
+    # sapply function for each subtypes
+      p <- sapply(subtype_list,get_final_prob,df=df, birth_year=by, 
+                  end_year=end_year, infect_prob=infect_prob)
+      p <- data.frame(as.list(p))
+      final_df=do.call(rbind, list(final_df, p))
+  }
+  final_df <- cbind(final_df, birth_year=birth_year_range)
+  return(final_df)
+}
+
+final <- get_birthyear_prob(mut_cases, 2017, 0.28,c(1960:1996), c('H1N1', 'H2N2', 'H3N2'))
+final
+```
+
+### plot each year probability
+
+```{r pressure, echo=FALSE}
+# sort final df by column names
+final <- final[,order(colnames(final))]
+mut_final <- melt(final, id.vars="birth_year") 
+
+# plot it out!
+ggplot(mut_final, aes(fill = variable, 
+                      y = value, x = birth_year))+ 
+  geom_bar(position = "fill", stat = "identity")+ 
+  ggtitle("Probability of first infection on 2017 for 1960-1996 borns in the US")+ 
+  labs(y="probability")+
+  theme(plot.title = element_text(hjust = 0.5))+
+  theme_cowplot()
+
+```
