@@ -7,7 +7,13 @@ Team: "Butterfly"
 
 ## Basic ideas
 
-assumptions: 1. the risk of influenza infection is 28% in each year of life 2. the frequency of each circulating subtype could be inferred from the numbers of isolates sampled (primarily in hospitals) each year
+*Defensive programming Principle 1. Before writing code, draft your program as a series of modular functions with high-level documentation, and develop tests for it.*
+
+assumptions:
+
+1.  the risk of influenza infection is 28% in each year of life
+
+2.  the frequency of each circulating subtype could be inferred from the numbers of isolates sampled (primarily in hospitals) each year
 
 let e_ij = probability of an individual with birth year i has his or her first IAV infection in calendar year j: e_ij = (1-a)\^(j-i) \* a where a is the risk of influenza infection in each year of life (0.28)
 
@@ -16,6 +22,14 @@ next, scaled e_ij by the fraction f_S of circulating IAVs belonging to subtype S
 finally, e_Si\|y is the probability that individuals born in i experienced their first infection with subtype S, given that y is current year (2017?). So we have: e_Si\|y = sum (e_Sij) from year i to year y
 
 ## codes
+
+*Defensive programming Principle 2: Write clearly and cautiously. & Defensive programming Principle 3: Develop one function at a time, and test it before writing another*
+
+Here I divided the code into a series of functions, each function only carry out one related calculation, and use a final function to wrap them up. Also I use Rmd and divided the whole program into code block with indexes, to make it more clear
+
+*Principle 4: Document often & Principle 5. Refactor often*
+
+We track and refactor our ideas and codes on Google doc and in this file
 
 ### read and modify input dataset
 
@@ -143,3 +157,5 @@ ggplot(mut_final, aes(fill = variable,
   theme_cowplot()
 
 ```
+
+*Principle 6. When you run your code, save each “experiment” in a separate directory with a complete copy of the code repository and all parameters.*
